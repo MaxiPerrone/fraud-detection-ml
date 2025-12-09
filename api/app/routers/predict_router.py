@@ -25,17 +25,19 @@ def predict(
         "used_pin_number": txn.used_pin_number,
         "online_order": txn.online_order,
     }])
-
-    X_scaled = scaler.transform(X_raw)
-
-    X_scaled_df = pd.DataFrame(X_scaled, columns=X_raw.columns)
+    
+    if model_name != "random_forest":
+        X_scaled = scaler.transform(X_raw)
+        X_input = pd.DataFrame(X_scaled, columns=X_raw.columns)
+    else:
+        X_input = X_raw
 
     model = models[model_name]
-    y_pred = model.predict(X_scaled_df)[0]
+    y_pred = model.predict(X_input)[0]
 
     probability = None
     if hasattr(model, "predict_proba"):
-        probability = float(model.predict_proba(X_scaled_df)[0][1])
+        probability = float(model.predict_proba(X_input)[0][1])
 
     return {
         "model": model_name,

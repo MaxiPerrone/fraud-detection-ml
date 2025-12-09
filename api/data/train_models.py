@@ -7,6 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import accuracy_score
 
 DATA_DIR = Path(__file__).resolve().parent 
@@ -22,7 +23,7 @@ with open(DATA_DIR / "y_test.pkl", "rb") as f:
     y = pickle.load(f)
 
 X_train, X_valid, y_train, y_valid = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X, y, test_size=0.2, random_state=42
 )
 
 scaler = StandardScaler()
@@ -42,27 +43,28 @@ print(f"Logistic regression accuracy: {accuracy_score(y_valid, log_pred):.3f}")
 
 # Random Forest
 rf_model = RandomForestClassifier(
-    n_estimators=15,
-    random_state=42,
-    n_jobs=-1
+    random_state=42
 )
 rf_model.fit(X_train, y_train)
 rf_pred = rf_model.predict(X_valid)
 print(f"Random forest accuracy: {accuracy_score(y_valid, rf_pred):.3f}")
 
-sample_size = min(30000, len(X_train_scaled))
+sample_size = min(40000, len(X_train_scaled))
 X_svm_train = X_train_scaled[:sample_size]
 y_svm_train = y_train.iloc[:sample_size]
 
-svm_model = SVC(probability=True, random_state=42)
-svm_model.fit(X_svm_train, y_svm_train)
-svm_pred = svm_model.predict(X_valid_scaled)
-print(f"SVM accuracy: {accuracy_score(y_valid, svm_pred):.3f}")
 
+svm_classifier = SVC(kernel = "linear", probability=True, random_state=42)
+calibrated_svm = CalibratedClassifierCV(svm_classifier)
+calibrated_svm.fit(X_svm_train, y_svm_train)
+
+calibrated_svm.fit(X_svm_train, y_svm_train)
+svm_pred = calibrated_svm.predict(X_valid_scaled)
+print(f"SVM accuracy: {accuracy_score(y_valid, svm_pred):.3f}")
 
 joblib.dump(log_model, MODELS_DIR / "logistic_regression.pkl")
 joblib.dump(rf_model, MODELS_DIR / "random_forest.pkl")
-joblib.dump(svm_model, MODELS_DIR / "svm.pkl")
+joblib.dump(calibrated_svm, MODELS_DIR / "svm.pkl")
 joblib.dump(scaler, MODELS_DIR / "scaler.pkl")
 
 print(f"Modelos y scaler guardados en {MODELS_DIR}")

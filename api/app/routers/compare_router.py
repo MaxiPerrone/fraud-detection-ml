@@ -23,15 +23,19 @@ def compare(txn: Transaction):
         "online_order": txn.online_order,
     }])
 
-    X_scaled = scaler.transform(X_raw)
-    X_scaled_df = pd.DataFrame(X_scaled, columns=X_raw.columns)
-
     results = {}
 
     for name, model in models.items():
-        y_pred = model.predict(X_scaled_df)[0]
+        if name != "random_forest":
+            X_scaled = scaler.transform(X_raw)
+            X_input = pd.DataFrame(X_scaled, columns=X_raw.columns)
+        else:
+            X_input = X_raw
+        
+        
+        y_pred = model.predict(X_input)[0]
         prob = (
-            float(model.predict_proba(X_scaled_df)[0][1])
+            float(model.predict_proba(X_input)[0][1])
             if hasattr(model, "predict_proba")
             else None
         )
@@ -41,7 +45,7 @@ def compare(txn: Transaction):
             "probability": round(prob, 3) if prob is not None else None
         }
 
-    consensus = ensemble_predict(models, X_scaled_df)
+    consensus = ensemble_predict(models, X_input)
     consensus_label = "Fraud" if consensus == 1 else "Legit"
 
     return {
